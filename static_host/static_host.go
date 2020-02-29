@@ -14,13 +14,36 @@ import (
 )
 
 type config struct {
-	Routes *[]route `json:"routes"`
+	Rules *[]rule `json:"rules,omitempty"`
+}
+
+type header struct {
+	Source      *string `json:"source,omitempty"`
+	Destination *string `json:"destination,omitempty"`
+	Continue    bool    `json:"continue,omitempty"`
 }
 
 type route struct {
-	UseFilesystem bool    `json:"use_filesystem,omitempty"`
-	Source        *string `json:"src,omitempty"`
-	Destination   *string `json:"dest,omitempty"`
+	UseFilesystem bool  `json:"useFilesystem,omitempty"`
+	StatusCode    *uint `json:"statusCode,omitempty"`
+}
+
+type redirect struct {
+	Source      *string `json:"source,omitempty"`
+	Destination *string `json:"destination,omitempty"`
+	StatusCode  *uint   `json:"statusCode,omitempty"`
+}
+
+type rewrite struct {
+	Source      *string `json:"source,omitempty"`
+	Destination *string `json:"destination,omitempty"`
+}
+
+type rule struct {
+	Route    *route
+	Redirect *redirect
+	Rewrite  *rewrite
+	Header   *header
 }
 
 type server struct {
@@ -48,8 +71,6 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// FIXME: handle
 	}
-
-
 
 	w.Write([]byte(*deploymentId))
 }
