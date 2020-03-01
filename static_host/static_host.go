@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"net/http"
@@ -13,43 +14,14 @@ import (
 	"strings"
 )
 
-type config struct {
-	Rules *[]rule `json:"rules,omitempty"`
-}
-
-type header struct {
-	Source      *string `json:"source,omitempty"`
-	Destination *string `json:"destination,omitempty"`
-	Continue    bool    `json:"continue,omitempty"`
-}
-
-type route struct {
-	UseFilesystem bool  `json:"useFilesystem,omitempty"`
-	StatusCode    *uint `json:"statusCode,omitempty"`
-}
-
-type redirect struct {
-	Source      *string `json:"source,omitempty"`
-	Destination *string `json:"destination,omitempty"`
-	StatusCode  *uint   `json:"statusCode,omitempty"`
-}
-
-type rewrite struct {
-	Source      *string `json:"source,omitempty"`
-	Destination *string `json:"destination,omitempty"`
-}
-
-type rule struct {
-	Route    *route
-	Redirect *redirect
-	Rewrite  *rewrite
-	Header   *header
+type s3Service interface {
+	GetObjectWithContext(ctx context.Context, input *s3.GetObjectInput, opts ...request.Option) (*s3.GetObjectOutput, error)
 }
 
 type server struct {
 	hostSuffix string
 	s3Bucket   string
-	s3svc      *s3.S3
+	s3svc      s3Service
 }
 
 var (
@@ -72,7 +44,12 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// FIXME: handle
 	}
 
-	w.Write([]byte(*deploymentId))
+	if deploymentId != nil {
+		_, _ = w.Write([]byte(*deploymentId))
+	} else {
+		w.WriteHeader(500)
+		_, _ = w.Write([]byte{})
+	}
 }
 
 func (s *server) getDeploymentConfig(context context.Context, deploymentId string) (*config, error) {
