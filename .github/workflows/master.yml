@@ -1,0 +1,34 @@
+name: Master Build, Test, Publish
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Login to ECR
+      id: ecr
+      uses: elgohr/ecr-login-action@051c1631071f5c9617a343d86e1e3c7827df1898
+      with:
+        access_key: ${{ secrets.AWS_ACCESS_KEY }}
+        secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        region: ${{ secrets.AWS_REGION }}
+    - name: Docker Build and Publish Snapshot
+      uses: elgohr/Publish-Docker-Github-Action@a11682167c13d44d09d44a8c601c435e6372d8c9
+      with:
+        name: nullserve-api-snapshot/static-host
+        username: ${{ steps.ecr.outputs.username }}
+        password: ${{ steps.ecr.outputs.password }}
+        registry: ${{ steps.ecr.outputs.registry }}
+        snapshot: true
+    - name: Docker Build and Publish Version
+      uses: elgohr/Publish-Docker-Github-Action@a11682167c13d44d09d44a8c601c435e6372d8c9
+      with:
+        name: nullserve-api-tagged/static-host
+        username: ${{ steps.ecr.outputs.username }}
+        password: ${{ steps.ecr.outputs.password }}
+        registry: ${{ steps.ecr.outputs.registry }}
+        tags: "latest"
+        tag_names: true
