@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"log"
 	"net/http"
 	"path"
 	"strings"
@@ -90,6 +91,7 @@ func (s *server) getDeploymentConfig(context context.Context, deploymentId strin
 }
 
 func Main() {
+	var err error
 	sess := session.Must(session.NewSession(&aws.Config{Region: aws.String("us-east-1")}))
 	s3svc := s3.New(sess)
 	srv := http.Server{
@@ -99,5 +101,8 @@ func Main() {
 			s3Bucket: "nullserve-api-site-deployments20191125172523931100000001",
 		},
 	}
-	_ = srv.ListenAndServe()
+	err = srv.ListenAndServe()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
