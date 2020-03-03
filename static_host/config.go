@@ -2,6 +2,7 @@ package static_host
 
 import (
 	"encoding/json"
+	"errors"
 	"regexp"
 )
 
@@ -10,8 +11,9 @@ type config struct {
 	Routes   []route         `json:"rules"`
 }
 type header struct {
-	key   string
-	value string
+	Overwrite *bool  `json:"overwrite,omitempty"`
+	Key       string `json:"key"`
+	Value     string `json:"value"`
 }
 
 type route struct {
@@ -28,7 +30,11 @@ type action struct {
 	Destination string
 }
 
-func (c *config) matchRule(path string) (*action, error) {
+var (
+	errNoMatchedRoute = errors.New("no route matched the path requested")
+)
+
+func (c *config) matchRoute(path string) (*action, error) {
 	for _, route := range c.Routes {
 		if route.UseFilesystem != nil {
 			if _, ok := c.Manifest[path]; ok {
@@ -57,8 +63,7 @@ func (c *config) matchRule(path string) (*action, error) {
 			}
 		}
 	}
-
-	return nil, nil
+	return nil, errNoMatchedRoute
 }
 
 func (c *config) validate() bool {
@@ -110,7 +115,7 @@ func (c *config) UnmarshalJSON(data []byte) error {
 }
 
 func (h *header) validate() bool {
-	return h.key != "" && h.value != ""
+	return h.Key != "" && h.Value != ""
 }
 
 func (r *route) validate() bool {
