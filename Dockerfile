@@ -1,4 +1,4 @@
-FROM golang AS build
+FROM golang:1.13 AS build
 
 WORKDIR /workspace
 RUN echo "nobody:x:65534:65534:Nobody:/:" > /etc_passwd
@@ -12,6 +12,7 @@ RUN CGO_ENABLED=0 go build -o /static-host
 
 
 FROM scratch AS run
+EXPOSE 80
 
 USER nobody
 
