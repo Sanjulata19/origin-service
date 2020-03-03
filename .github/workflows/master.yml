@@ -13,7 +13,7 @@ jobs:
       uses: elgohr/ecr-login-action@051c1631071f5c9617a343d86e1e3c7827df1898
       with:
         access_key: ${{ secrets.AWS_ACCESS_KEY }}
-        secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ID }}
         region: ${{ secrets.AWS_REGION }}
     - name: Docker Build and Publish Snapshot
       uses: elgohr/Publish-Docker-Github-Action@a11682167c13d44d09d44a8c601c435e6372d8c9
