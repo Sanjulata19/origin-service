@@ -1,7 +1,13 @@
 package static_host
 
+import (
+	"encoding/json"
+	"regexp"
+)
+
 type config struct {
-	Rules *[]rule `json:"rules,omitempty"`
+	Manifest map[string]bool `json:"manifest"`
+	Routes   []route         `json:"rules"`
 }
 type header struct {
 	key   string
@@ -9,41 +15,57 @@ type header struct {
 }
 
 type route struct {
-	UseFilesystem *bool   `json:"useFilesystem,omitempty"`
-	Source        *string `json:"source,omitempty"`
-	Destination   *string `json:"destination,omitempty"`
-	StatusCode    *uint   `json:"statusCode,omitempty"`
+	UseFilesystem *bool          `json:"useFilesystem,omitempty"`
+	Source        *regexp.Regexp `json:"source,omitempty"`
+	Destination   *string        `json:"destination,omitempty"`
+	StatusCode    *uint          `json:"statusCode,omitempty"`
+	Headers       *[]header      `json:"headers,omitempty"`
 }
 
-type redirect struct {
-	Source      *string `json:"source,omitempty"`
-	Destination *string `json:"destination,omitempty"`
-	StatusCode  *uint   `json:"statusCode,omitempty"`
+type action struct {
+	StatusCode  uint
+	Headers     []header
+	Destination string
 }
 
-type rewrite struct {
-	Source      *string `json:"source,omitempty"`
-	Destination *string `json:"destination,omitempty"`
-}
+func (c *config) matchRule(path string) (*action, error) {
+	for _, route := range c.Routes {
+		if route.UseFilesystem != nil {
+			if _, ok := c.Manifest[path]; ok {
+				return &action{
+					StatusCode:  200,
+					Headers:     []header{},
+					Destination: path,
+				}, nil
+			}
+		}
+		if route.Source.MatchString(path) {
+			newPath := route.Source.ReplaceAllString(path, *route.Destination)
+			if _, ok := c.Manifest[newPath]; ok {
+				respAction := action{
+					StatusCode:  200,
+					Destination: newPath,
+					Headers:     []header{},
+				}
+				if route.StatusCode != nil {
+					respAction.StatusCode = *route.StatusCode
+				}
+				if route.Headers != nil {
+					respAction.Headers = *route.Headers
+				}
+				return &respAction, nil
+			}
+		}
+	}
 
-type rule struct {
-	Route      *route      `json:"route,omitempty"`
-	Redirect   *redirect   `json:"redirect,omitempty"`
-	Rewrite    *rewrite    `json:"rewrite,omitempty"`
-	SetHeaders *setHeaders `json:"setHeaders,omitempty"`
-}
-
-type setHeaders struct {
-	Source   *string   `json:"source,omitempty"`
-	Headers  *[]header `json:"headers,omitempty"`
-	Continue *bool     `json:"continue,omitempty"`
+	return nil, nil
 }
 
 func (c *config) validate() bool {
-	if c.Rules != nil {
+	if c.Routes != nil {
 		isValid := true
-		for _, rule := range *c.Rules {
-			isValid = rule.validate()
+		for _, route := range c.Routes {
+			isValid = route.validate()
 			if !isValid {
 				break
 			}
@@ -53,26 +75,42 @@ func (c *config) validate() bool {
 	return true
 }
 
+func (c *config) MarshalJSON() ([]byte, error) {
+	type alias config
+	manifestList := make([]string, 0)
+	for manifestItem := range c.Manifest {
+		manifestList = append(manifestList, manifestItem)
+	}
+	return json.Marshal(&struct {
+		Manifest []string `json:"manifest"`
+		*alias
+	}{
+		Manifest: manifestList,
+		alias:    (*alias)(c),
+	})
+}
+
+func (c *config) UnmarshalJSON(data []byte) error {
+	type alias config
+	aux := struct {
+		Manifest []string `json:"manifest"`
+		*alias
+	}{
+		alias: (*alias)(c),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	manifestMap := make(map[string]bool)
+	for _, manifestItem := range aux.Manifest {
+		manifestMap[manifestItem] = true
+	}
+	c.Manifest = manifestMap
+	return nil
+}
+
 func (h *header) validate() bool {
 	return h.key != "" && h.value != ""
-}
-
-func (r *redirect) validate() bool {
-	return r.Source != nil &&
-		r.Destination != nil &&
-		*r.Source != "" &&
-		*r.Destination != "" &&
-		(r.StatusCode == nil ||
-			(r.StatusCode != nil &&
-				*r.StatusCode >= 300 &&
-				*r.StatusCode <= 399))
-}
-
-func (r *rewrite) validate() bool {
-	return r.Source != nil &&
-		r.Destination != nil &&
-		*r.Source != "" &&
-		*r.Destination != ""
 }
 
 func (r *route) validate() bool {
@@ -83,32 +121,10 @@ func (r *route) validate() bool {
 			r.StatusCode == nil) ||
 		(!(r.UseFilesystem != nil && *r.UseFilesystem) &&
 			r.Source != nil &&
-			*r.Source != "" &&
 			r.Destination != nil &&
 			*r.Destination != "" &&
 			(r.StatusCode == nil ||
 				(r.StatusCode != nil &&
 					*r.StatusCode >= 200 &&
 					*r.StatusCode <= 499)))
-}
-
-func (r *rule) validate() bool {
-	return (r.Route != nil && r.Redirect == nil && r.Rewrite == nil && r.SetHeaders == nil && r.Route.validate()) ||
-		(r.Route == nil && r.Redirect != nil && r.Rewrite == nil && r.SetHeaders == nil && r.Redirect.validate()) ||
-		(r.Route == nil && r.Redirect == nil && r.Rewrite != nil && r.SetHeaders == nil && r.Rewrite.validate()) ||
-		(r.Route == nil && r.Redirect == nil && r.Rewrite == nil && r.SetHeaders != nil && r.SetHeaders.validate())
-}
-
-func (s *setHeaders) validate() bool {
-	if s.Source != nil && s.Headers != nil && *s.Source != "" {
-		isValid := true
-		for _, header := range *s.Headers {
-			isValid = header.validate()
-			if !isValid {
-				break
-			}
-		}
-		return isValid
-	}
-	return false
 }

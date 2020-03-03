@@ -16,6 +16,7 @@ import (
 
 type s3Service interface {
 	GetObjectWithContext(ctx context.Context, input *s3.GetObjectInput, opts ...request.Option) (*s3.GetObjectOutput, error)
+	ListObjectsV2PagesWithContext(ctx aws.Context, input *s3.ListObjectsV2Input, fn func(*s3.ListObjectsV2Output, bool) bool, opts ...request.Option) error
 }
 
 type server struct {
@@ -37,19 +38,31 @@ func hostToDeploymentId(host, suffix string) (*string, error) {
 	}
 }
 
-func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *server) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	var err error
 	deploymentId, err := hostToDeploymentId(r.Host, s.hostSuffix)
 	if err != nil {
-		// FIXME: handle
+		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+		rw.WriteHeader(http.StatusBadGateway)
+		// FIXME: write error response object and headers
+		return
 	}
 
-	if deploymentId != nil {
-		_, _ = w.Write([]byte(*deploymentId))
-	} else {
-		w.WriteHeader(500)
-		_, _ = w.Write([]byte{})
+	config, err := s.getDeploymentConfig(r.Context(), *deploymentId)
+	if err != nil {
+		return
+		// FIXME
 	}
+
+	rr := responseRouter{
+		deploymentId: *deploymentId,
+		config:       config,
+		server:       s,
+		r:            r,
+		rw:           rw,
+	}
+	rr.routeAndRespond()
+	return
 }
 
 func (s *server) getDeploymentConfig(context context.Context, deploymentId string) (*config, error) {
@@ -62,7 +75,7 @@ func (s *server) getDeploymentConfig(context context.Context, deploymentId strin
 	// Default config
 	cfg := config{}
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok && aerr.Code() != s3.ErrCodeNoSuchKey {
+		if aErr, ok := err.(awserr.Error); ok && aErr.Code() != s3.ErrCodeNoSuchKey {
 			// FIXME: handle
 			return nil, nil
 		}
@@ -77,12 +90,13 @@ func (s *server) getDeploymentConfig(context context.Context, deploymentId strin
 }
 
 func Main() {
-	sess := session.Must(session.NewSession())
+	sess := session.Must(session.NewSession(&aws.Config{Region: aws.String("us-east-1")}))
 	s3svc := s3.New(sess)
 	srv := http.Server{
 		Addr: ":80",
 		Handler: &server{
-			s3svc: s3svc,
+			s3svc:    s3svc,
+			s3Bucket: "nullserve-api-site-deployments20191125172523931100000001",
 		},
 	}
 	_ = srv.ListenAndServe()
