@@ -26,9 +26,16 @@ type server struct {
 	s3svc      s3Service
 }
 
+type controlServer struct {}
+
 var (
 	errNoSuchSuffix = errors.New("host does not have suffix")
 )
+
+func (cs *controlServer) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
+	rw.WriteHeader(200)
+	rw.Write([]byte("ok."))
+}
 
 func hostToDeploymentId(host, suffix string) (*string, error) {
 	if strings.HasSuffix(host, "."+suffix) {
@@ -101,7 +108,20 @@ func Main() {
 			s3Bucket: "nullserve-api-site-deployments20191125172523931100000001",
 		},
 	}
-	err = srv.ListenAndServe()
+	cSrv := http.Server{
+		Addr: ":8080",
+		Handler: &controlServer{},
+	}
+	go func() {
+		err = srv.ListenAndServe()
+
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	err = cSrv.ListenAndServe()
+
 	if err != nil {
 		log.Fatal(err)
 	}

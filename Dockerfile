@@ -15,6 +15,7 @@ RUN CGO_ENABLED=0 go build -o /static-host
 
 FROM scratch AS run
 EXPOSE 80
+EXPOSE 8080
 
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /usr/share/zoneinfo /usr/share/
