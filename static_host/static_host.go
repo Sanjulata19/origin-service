@@ -105,6 +105,7 @@ func Main() {
 		Addr: ":80",
 		Handler: &server{
 			s3svc:    s3svc,
+			hostSuffix: "sites.nullserve.dev",
 			s3Bucket: "nullserve-api-site-deployments20191125172523931100000001",
 		},
 	}
