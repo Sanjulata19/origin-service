@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"path"
@@ -24,9 +25,10 @@ type server struct {
 	hostSuffix string
 	s3Bucket   string
 	s3svc      s3Service
+	logger     *zap.Logger
 }
 
-type controlServer struct {}
+type controlServer struct{}
 
 var (
 	errNoSuchSuffix = errors.New("host does not have suffix")
@@ -58,8 +60,9 @@ func (s *server) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	config, err := s.getDeploymentConfig(r.Context(), *deploymentId)
 	if err != nil {
+		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
-		// FIXME
 	}
 
 	rr := responseRouter{
@@ -84,14 +87,16 @@ func (s *server) getDeploymentConfig(context context.Context, deploymentId strin
 	cfg := config{}
 	if err != nil {
 		if aErr, ok := err.(awserr.Error); ok && aErr.Code() != s3.ErrCodeNoSuchKey {
-			// FIXME: handle
-			return nil, nil
+			s.logger.Error("s3 service error",
+				zap.String("error", aErr.Error()))
+			return nil, errors.New("s3 service error")
 		}
 	} else {
 		err = json.NewDecoder(s3Res.Body).Decode(&cfg)
 		if err != nil {
-			// FIXME: handle
-			return nil, nil
+			s.logger.Error("invalid config, failing",
+				zap.String("error", err.Error()))
+			return nil, errors.New("invalid config, failing")
 		}
 	}
 	return &cfg, nil
@@ -104,13 +109,14 @@ func Main() {
 	srv := http.Server{
 		Addr: ":80",
 		Handler: &server{
-			s3svc:    s3svc,
+			s3svc:      s3svc,
 			hostSuffix: "sites.nullserve.dev",
-			s3Bucket: "nullserve-api-site-deployments20191125172523931100000001",
+			s3Bucket:   "nullserve-api-site-deployments20191125172523931100000001",
+			logger:     zap.NewExample(),
 		},
 	}
 	cSrv := http.Server{
-		Addr: ":8080",
+		Addr:    ":8080",
 		Handler: &controlServer{},
 	}
 	go func() {
