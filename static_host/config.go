@@ -112,46 +112,46 @@ func (r *route) MarshalJSON() ([]byte, error) {
 }
 
 func (c *config) UnmarshalJSON(data []byte) error {
-	// Unmarshal most of config normally
 	type alias config
-	if err := json.Unmarshal(data, (*alias)(c)); err != nil {
-		return err
-	}
-
-	// Unmarshal manifest abnormally
-	var aux struct {
-		Manifest []string `json:"manifest"`
+	aux := struct {
+		Manifest []string          `json:"manifest"`
+		Routes   []json.RawMessage `json:"routes"`
+		*alias
+	}{
+		alias: (*alias)(c),
 	}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-
-	// Modify unmarshaled manifest to fit into config
 	manifestMap := make(map[string]bool)
+	routeList := make([]route, len(aux.Routes))
 	for _, manifestItem := range aux.Manifest {
 		manifestMap[manifestItem] = true
 	}
+	for i, jsonRoute := range aux.Routes {
+		var r route
+		if err := json.Unmarshal(jsonRoute, &r); err != nil {
+			return err
+		}
+		routeList[i] = r
+	}
 	c.Manifest = manifestMap
+	c.Routes = routeList
 	return nil
 }
 
 func (r *route) UnmarshalJSON(data []byte) error {
 	log.Printf("unmarshalJSON route")
-	// Unmarshal most of route normally
 	type alias route
-	if err := json.Unmarshal(data, (*alias)(r)); err != nil {
-		return err
-	}
-
-	// Unmarshal source abnormally
-	var aux struct {
+	aux := struct {
 		Source string `json:"source"`
+		*alias
+	}{
+		alias: (*alias)(r),
 	}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-
-	// Modify unmarshaled source to fit into route
 	if sourceRegex, err := regexp.Compile(aux.Source); err != nil {
 		return err
 	} else {
