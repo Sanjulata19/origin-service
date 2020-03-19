@@ -95,6 +95,17 @@ func (c *config) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (r *route) MarshalJSON() ([]byte, error) {
+	type alias route
+	return json.Marshal(&struct {
+		Source string `json:"source"`
+		*alias
+	}{
+		Source: r.Source.String(),
+		alias: (*alias)(r),
+	})
+}
+
 func (c *config) UnmarshalJSON(data []byte) error {
 	type alias config
 	aux := struct {
@@ -111,6 +122,25 @@ func (c *config) UnmarshalJSON(data []byte) error {
 		manifestMap[manifestItem] = true
 	}
 	c.Manifest = manifestMap
+	return nil
+}
+
+func (r *route) UnmarshalJSON(data []byte) error {
+	type alias route
+	aux := struct {
+		Source string `json:"source"`
+		*alias
+	}{
+		alias: (*alias)(r),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if sourceRegex, err := regexp.Compile(aux.Source); err != nil {
+		return err
+	} else {
+		r.Source = sourceRegex
+	}
 	return nil
 }
 
