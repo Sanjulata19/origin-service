@@ -84,7 +84,7 @@ func (s *server) getDeploymentConfig(context context.Context, deploymentId strin
 	}
 	s3Res, err := s.s3svc.GetObjectWithContext(context, s3Req)
 	// Default config
-	cfg := config{}
+	cfg := config{Routes: []route{{UseFilesystem: aws.Bool(true)}}}
 	if err != nil {
 		if aErr, ok := err.(awserr.Error); ok && aErr.Code() != s3.ErrCodeNoSuchKey {
 			s.logger.Error("s3 service error",

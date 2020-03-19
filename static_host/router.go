@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"go.uber.org/zap"
 	"net/http"
 	"path"
 	"strconv"
@@ -21,8 +22,12 @@ func (rr *responseRouter) routeAndRespond() {
 	var err error
 	action, err := rr.config.matchRoute(rr.r.URL.Path)
 	if err != nil {
-		// FIXME: 502 here
-		//_, err := rr.rw.Write([])
+		rr.server.logger.Error("no route match",
+			zap.String("error", err.Error()))
+		rr.rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+		rr.rw.WriteHeader(http.StatusBadGateway)
+		// TODO: write a message to users
+		//_, err = rr.rw.Write([]byte(""))
 		return
 	}
 
