@@ -20,6 +20,7 @@ type responseRouter struct {
 
 func (rr *responseRouter) routeAndRespond() {
 	var err error
+	rr.server.logger.Info("routing", zap.String("path", rr.r.URL.Path))
 	action, err := rr.config.matchRoute(rr.r.URL.Path)
 	if err != nil {
 		rr.server.logger.Error("no route match",

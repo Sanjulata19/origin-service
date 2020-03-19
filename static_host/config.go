@@ -36,7 +36,7 @@ var (
 
 func (c *config) matchRoute(path string) (*action, error) {
 	for _, route := range c.Routes {
-		if route.UseFilesystem != nil {
+		if route.UseFilesystem != nil && *route.UseFilesystem{
 			if _, ok := c.Manifest[path]; ok {
 				return &action{
 					StatusCode:  200,
@@ -45,7 +45,7 @@ func (c *config) matchRoute(path string) (*action, error) {
 				}, nil
 			}
 		}
-		if route.Source.MatchString(path) {
+		if route.Source != nil && route.Source.MatchString(path) {
 			newPath := route.Source.ReplaceAllString(path, *route.Destination)
 			if _, ok := c.Manifest[newPath]; ok {
 				respAction := action{
