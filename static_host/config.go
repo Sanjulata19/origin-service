@@ -3,6 +3,7 @@ package static_host
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"regexp"
 )
 
@@ -47,7 +48,9 @@ func (c *config) matchRoute(path string) (*action, error) {
 		}
 		if route.Source != nil && route.Source.MatchString(path) {
 			newPath := route.Source.ReplaceAllString(path, *route.Destination)
+			log.Printf("trying: %s\n", newPath)
 			if _, ok := c.Manifest[newPath]; ok {
+				log.Printf("found newPath\n")
 				respAction := action{
 					StatusCode:  200,
 					Destination: newPath,
@@ -61,6 +64,7 @@ func (c *config) matchRoute(path string) (*action, error) {
 				}
 				return &respAction, nil
 			}
+			log.Printf("didn't find newPath\n")
 		}
 	}
 	return nil, errNoMatchedRoute
