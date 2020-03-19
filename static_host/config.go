@@ -3,6 +3,7 @@ package static_host
 import (
 	"encoding/json"
 	"errors"
+	"github.com/aws/aws-sdk-go/aws"
 	"log"
 	"regexp"
 )
@@ -103,10 +104,10 @@ func (c *config) MarshalJSON() ([]byte, error) {
 func (r *route) MarshalJSON() ([]byte, error) {
 	type alias route
 	return json.Marshal(&struct {
-		Source string `json:"source"`
+		Source *string `json:"source,omitempty"`
 		*alias
 	}{
-		Source: r.Source.String(),
+		Source: aws.String(r.Source.String()),
 		alias:  (*alias)(r),
 	})
 }
@@ -144,7 +145,7 @@ func (r *route) UnmarshalJSON(data []byte) error {
 	log.Printf("unmarshalJSON route")
 	type alias route
 	aux := struct {
-		Source string `json:"source"`
+		Source *string `json:"source,omitempty"`
 		*alias
 	}{
 		alias: (*alias)(r),
@@ -152,10 +153,12 @@ func (r *route) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	if sourceRegex, err := regexp.Compile(aux.Source); err != nil {
-		return err
-	} else {
-		r.Source = sourceRegex
+	if aux.Source != nil {
+		if sourceRegex, err := regexp.Compile(*aux.Source); err != nil {
+			return err
+		} else {
+			r.Source = sourceRegex
+		}
 	}
 	return nil
 }
