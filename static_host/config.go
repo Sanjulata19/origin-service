@@ -37,6 +37,7 @@ var (
 
 func (c *config) matchRoute(path string) (*action, error) {
 	for _, route := range c.Routes {
+		log.Printf("route: %#v", route)
 		if route.UseFilesystem != nil && *route.UseFilesystem{
 			if _, ok := c.Manifest[path]; ok {
 				return &action{
@@ -130,6 +131,7 @@ func (c *config) UnmarshalJSON(data []byte) error {
 }
 
 func (r *route) UnmarshalJSON(data []byte) error {
+	log.Printf("unmarshalJSON route")
 	type alias route
 	aux := struct {
 		Source string `json:"source"`
