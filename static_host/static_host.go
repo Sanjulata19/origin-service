@@ -103,6 +103,7 @@ func (s *server) getDeploymentConfig(context context.Context, deploymentId strin
 }
 
 func Main() {
+	log.Println("Starting Server")
 	var err error
 	sess := session.Must(session.NewSession(&aws.Config{Region: aws.String("us-east-1")}))
 	s3svc := s3.New(sess)
