@@ -1,7 +1,30 @@
 package main
 
-import "github.com/nullserve/static-host/static_host"
+import (
+	"encoding/json"
+	"github.com/nullserve/static-host/cmd"
+	"log"
+)
 
-func main()  {
-	static_host.Main()
+type LogMessage struct {
+	Error Error `json:"error"`
+}
+
+type Error struct {
+	Message string `json:"message"`
+}
+
+func main() {
+	err := cmd.RootCmd.Execute()
+	if err != nil {
+		if message, err := json.Marshal(LogMessage{
+			Error: Error{
+				Message: err.Error(),
+			},
+		}); err == nil {
+			log.Fatal(message)
+		} else {
+			panic(err.Error())
+		}
+	}
 }
