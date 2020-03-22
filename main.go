@@ -15,7 +15,7 @@ type Error struct {
 }
 
 func main() {
-	err := cmd.RootCmd.Execute()
+	err := cmd.Execute()
 	if err != nil {
 		if message, err := json.Marshal(LogMessage{
 			Error: Error{
