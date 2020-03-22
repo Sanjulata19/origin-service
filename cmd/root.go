@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/nullserve/static-host/config"
 	"github.com/nullserve/static-host/static_host"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -31,8 +32,10 @@ func init() {
 		&s3Bucket,
 		"s3-bucket",
 		"",
-		"",
-		"The s3 bucket to use as a source",
+		// FIXME: un-hardcode this default
+		"nullserve-api-site-deployments20191125172523931100000001",
+		// Required until multiple sources are added
+		"The s3 bucket to use as a source (required)",
 	)
 	rootCmd.Flags().StringVarP(
 		&s3Prefix,
@@ -50,8 +53,12 @@ func initConfig() {
 	viper.AutomaticEnv()
 }
 
-func root(cmd *cobra.Command, args []string) {
-	static_host.Main()
+func root(cmd *cobra.Command, _ []string) {
+	cfg := &config.StaticHost{}
+	cfg.HostSuffix, _ = cmd.Flags().GetString("domain-suffix")
+	cfg.S3Source.BucketId, _ = cmd.Flags().GetString("s3-bucket")
+	cfg.S3Source.SiteFolderPrefix, _ = cmd.Flags().GetString("s3-prefix-folder")
+	static_host.Main(cfg)
 }
 
 func Execute() error {

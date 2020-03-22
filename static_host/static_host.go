@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/nullserve/static-host/config"
 	"go.uber.org/zap"
 	"log"
 	"net/http"
@@ -22,10 +23,9 @@ type s3Service interface {
 }
 
 type server struct {
-	hostSuffix string
-	s3Bucket   string
-	s3svc      s3Service
-	logger     *zap.Logger
+	config *config.StaticHost
+	s3svc  s3Service
+	logger *zap.Logger
 }
 
 type controlServer struct{}
@@ -36,7 +36,7 @@ var (
 
 func (cs *controlServer) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 	rw.WriteHeader(200)
-	rw.Write([]byte("ok."))
+	_, _ = rw.Write([]byte("ok."))
 }
 
 func hostToDeploymentId(host, suffix string) (*string, error) {
@@ -50,7 +50,7 @@ func hostToDeploymentId(host, suffix string) (*string, error) {
 
 func (s *server) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	var err error
-	deploymentId, err := hostToDeploymentId(r.Host, s.hostSuffix)
+	deploymentId, err := hostToDeploymentId(r.Host, s.config.HostSuffix)
 	if err != nil {
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusBadGateway)
@@ -58,7 +58,7 @@ func (s *server) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config, err := s.getDeploymentConfig(r.Context(), *deploymentId)
+	deploymentConfig, err := s.getDeploymentConfig(r.Context(), *deploymentId)
 	if err != nil {
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -67,7 +67,7 @@ func (s *server) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	rr := responseRouter{
 		deploymentId: *deploymentId,
-		config:       config,
+		config:       deploymentConfig,
 		server:       s,
 		r:            r,
 		rw:           rw,
@@ -76,15 +76,15 @@ func (s *server) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (s *server) getDeploymentConfig(context context.Context, deploymentId string) (*config, error) {
+func (s *server) getDeploymentConfig(context context.Context, deploymentId string) (*siteConfig, error) {
 	var err error
 	s3Req := &s3.GetObjectInput{
-		Bucket: &s.s3Bucket,
-		Key:    aws.String(path.Join("site-deployments", deploymentId, ".well-known", "nullserve.json")),
+		Bucket: &s.config.S3Source.BucketId,
+		Key:    aws.String(path.Join(s.config.S3Source.SiteFolderPrefix, deploymentId, ".well-known", "nullserve.json")),
 	}
 	s3Res, err := s.s3svc.GetObjectWithContext(context, s3Req)
 	// Default config
-	cfg := config{Routes: []route{{UseFilesystem: aws.Bool(true)}}}
+	cfg := siteConfig{Routes: []route{{UseFilesystem: aws.Bool(true)}}}
 	if err != nil {
 		if aErr, ok := err.(awserr.Error); ok && aErr.Code() != s3.ErrCodeNoSuchKey {
 			s.logger.Error("s3 service error",
@@ -102,18 +102,18 @@ func (s *server) getDeploymentConfig(context context.Context, deploymentId strin
 	return &cfg, nil
 }
 
-func Main() {
-	log.Println("Starting Server")
+func Main(cfg *config.StaticHost) {
+	logger := zap.NewExample()
+	logger.Info("starting Server")
 	var err error
 	sess := session.Must(session.NewSession(&aws.Config{Region: aws.String("us-east-1")}))
 	s3svc := s3.New(sess)
 	srv := http.Server{
 		Addr: ":80",
 		Handler: &server{
-			s3svc:      s3svc,
-			hostSuffix: "sites.nullserve.dev",
-			s3Bucket:   "nullserve-api-site-deployments20191125172523931100000001",
-			logger:     zap.NewExample(),
+			s3svc:  s3svc,
+			logger: logger,
+			config: cfg,
 		},
 	}
 	cSrv := http.Server{

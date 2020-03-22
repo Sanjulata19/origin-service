@@ -8,7 +8,7 @@ import (
 	"regexp"
 )
 
-type config struct {
+type siteConfig struct {
 	Manifest map[string]bool `json:"manifest"`
 	Routes   []route         `json:"rules"`
 }
@@ -36,7 +36,7 @@ var (
 	errNoMatchedRoute = errors.New("no route matched the path requested")
 )
 
-func (c *config) matchRoute(path string) (*action, error) {
+func (c *siteConfig) matchRoute(path string) (*action, error) {
 	for _, route := range c.Routes {
 		log.Printf("route: %#v", route)
 		if route.UseFilesystem != nil && *route.UseFilesystem {
@@ -72,7 +72,7 @@ func (c *config) matchRoute(path string) (*action, error) {
 	return nil, errNoMatchedRoute
 }
 
-func (c *config) validate() bool {
+func (c *siteConfig) validate() bool {
 	if c.Routes != nil {
 		isValid := true
 		for _, route := range c.Routes {
@@ -86,8 +86,8 @@ func (c *config) validate() bool {
 	return true
 }
 
-func (c *config) MarshalJSON() ([]byte, error) {
-	type alias config
+func (c *siteConfig) MarshalJSON() ([]byte, error) {
+	type alias siteConfig
 	manifestList := make([]string, 0)
 	for manifestItem := range c.Manifest {
 		manifestList = append(manifestList, manifestItem)
@@ -112,8 +112,8 @@ func (r *route) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (c *config) UnmarshalJSON(data []byte) error {
-	type alias config
+func (c *siteConfig) UnmarshalJSON(data []byte) error {
+	type alias siteConfig
 	aux := struct {
 		Manifest []string          `json:"manifest"`
 		Routes   []json.RawMessage `json:"routes"`
