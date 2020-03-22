@@ -14,6 +14,8 @@ var (
 		Run:   root,
 	}
 	domainSuffix string
+	s3Bucket     string
+	s3Prefix     string
 )
 
 func init() {
@@ -26,11 +28,18 @@ func init() {
 		"The domain suffix to be used for routing to sites. For example 123.sites.nullserve.dev has the suffix \"sites.nullserve.dev\"",
 	)
 	rootCmd.Flags().StringVarP(
-		&domainSuffix,
+		&s3Bucket,
 		"s3-bucket",
 		"",
-		"sites.nullserve.dev",
-		"The domain suffix to be used for routing to sites. For example 123.sites.nullserve.dev has the suffix \"sites.nullserve.dev\"",
+		"",
+		"The s3 bucket to use as a source",
+	)
+	rootCmd.Flags().StringVarP(
+		&s3Prefix,
+		"s3-prefix-folder",
+		"",
+		"site-deployments",
+		"The s3 folder to find sites in",
 	)
 	_ = viper.BindPFlags(rootCmd.Flags())
 }
