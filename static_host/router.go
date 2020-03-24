@@ -12,7 +12,7 @@ import (
 
 type responseRouter struct {
 	deploymentId string
-	config       *config
+	config       *siteConfig
 	server       *server
 	rw           http.ResponseWriter
 	r            *http.Request
@@ -33,7 +33,7 @@ func (rr *responseRouter) routeAndRespond() {
 	}
 
 	s3Req := &s3.GetObjectInput{
-		Bucket: &rr.server.s3Bucket,
+		Bucket: &rr.server.config.S3Source.BucketId,
 		Key:    aws.String(path.Join("site-deployments", path.Clean(path.Join(rr.deploymentId, action.Destination)))),
 	}
 
