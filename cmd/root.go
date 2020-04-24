@@ -14,9 +14,10 @@ var (
 		Short: "Static Host is a cloud storage web server and static file router",
 		Run:   root,
 	}
-	domainSuffix string
-	s3Bucket     string
-	s3Prefix     string
+	domainSuffix      string
+	dynamoDBTableName string
+	s3Bucket          string
+	s3Prefix          string
 )
 
 func init() {
@@ -25,7 +26,7 @@ func init() {
 		&domainSuffix,
 		"domain-suffix",
 		"",
-		"sites.nullserve.dev",
+		"nullserve.dev",
 		"The domain suffix to be used for routing to sites. For example 123.sites.nullserve.dev has the suffix \"sites.nullserve.dev\"",
 	)
 	rootCmd.Flags().StringVarP(
@@ -43,6 +44,14 @@ func init() {
 		"",
 		"site-deployments",
 		"The s3 folder to find sites in",
+	)
+	rootCmd.Flags().StringVarP(
+		&dynamoDBTableName,
+		"dynamodb-table-name",
+		"",
+		// FIXME: un-hardcode this default
+		"nullserve-api-cbdec46580e5a391",
+		"The dynamodb table to find sites in",
 	)
 	_ = viper.BindPFlags(rootCmd.Flags())
 }

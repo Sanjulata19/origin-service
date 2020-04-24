@@ -1,8 +1,9 @@
 package config
 
 type StaticHost struct {
-	S3Source   S3Source
-	HostSuffix string
+	S3Source          S3Source
+	HostSuffix        string
+	DynamoDBTableName string
 }
 
 type S3Source struct {

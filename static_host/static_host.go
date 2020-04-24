@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/nullserve/static-host/config"
 	"go.uber.org/zap"
@@ -22,10 +23,15 @@ type s3Service interface {
 	ListObjectsV2PagesWithContext(ctx aws.Context, input *s3.ListObjectsV2Input, fn func(*s3.ListObjectsV2Output, bool) bool, opts ...request.Option) error
 }
 
+type dynamoDBService interface {
+	GetItemWithContext(ctx context.Context, input *dynamodb.GetItemInput, opts ...request.Option) (*dynamodb.GetItemOutput, error)
+}
+
 type server struct {
-	config *config.StaticHost
-	s3svc  s3Service
-	logger *zap.Logger
+	config      *config.StaticHost
+	s3svc       s3Service
+	dynamoDBSvc dynamoDBService
+	logger      *zap.Logger
 }
 
 type controlServer struct{}
@@ -39,10 +45,35 @@ func (cs *controlServer) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 	_, _ = rw.Write([]byte("ok."))
 }
 
-func hostToDeploymentId(host, suffix string) (*string, error) {
+func (s *server) hostToDeploymentId(ctx context.Context, host, suffix string) (*string, error) {
 	if strings.HasSuffix(host, "."+suffix) {
-		trimmed := strings.TrimSuffix(host, "."+suffix)
-		return &trimmed, nil
+		if strings.HasSuffix(host, ".sites."+suffix) {
+			trimmed := strings.TrimSuffix(host, ".sites."+suffix)
+			return &trimmed, nil
+		} else {
+			trimmed := strings.TrimSuffix(host, "."+suffix)
+			site, err := s.dynamoDBSvc.GetItemWithContext(ctx, &dynamodb.GetItemInput{
+				Key: map[string]*dynamodb.AttributeValue{
+					"PartitionKey": {
+						S: aws.String("Site#" + trimmed),
+					},
+					"SortKey": {
+						S: aws.String("Site#" + trimmed),
+					},
+				},
+				TableName: aws.String(s.config.DynamoDBTableName),
+			})
+			if err != nil {
+				// TODO: fail here safely
+				return nil, err
+			}
+			if currentDeploymentId, ok := site.Item["CurrentDeploymentId"]; ok {
+				return currentDeploymentId.S, nil
+			} else {
+				// TODO: return a default
+				return nil, errNoSuchSuffix
+			}
+		}
 	} else {
 		return nil, errNoSuchSuffix
 	}
@@ -50,7 +81,7 @@ func hostToDeploymentId(host, suffix string) (*string, error) {
 
 func (s *server) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	var err error
-	deploymentId, err := hostToDeploymentId(r.Host, s.config.HostSuffix)
+	deploymentId, err := s.hostToDeploymentId(r.Context(), r.Host, s.config.HostSuffix)
 	if err != nil {
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusBadGateway)
@@ -107,13 +138,15 @@ func Main(cfg *config.StaticHost) {
 	logger.Info("starting Server")
 	var err error
 	sess := session.Must(session.NewSession(&aws.Config{Region: aws.String("us-east-1")}))
+	dynamoDBSvc := dynamodb.New(sess)
 	s3svc := s3.New(sess)
 	srv := http.Server{
 		Addr: ":80",
 		Handler: &server{
-			s3svc:  s3svc,
-			logger: logger,
-			config: cfg,
+			dynamoDBSvc: dynamoDBSvc,
+			s3svc:       s3svc,
+			logger:      logger,
+			config:      cfg,
 		},
 	}
 	cSrv := http.Server{
