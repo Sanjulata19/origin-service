@@ -67,6 +67,7 @@ func root(cmd *cobra.Command, _ []string) {
 	cfg.HostSuffix, _ = cmd.Flags().GetString("domain-suffix")
 	cfg.S3Source.BucketId, _ = cmd.Flags().GetString("s3-bucket")
 	cfg.S3Source.SiteFolderPrefix, _ = cmd.Flags().GetString("s3-prefix-folder")
+	cfg.DynamoDBTableName, _ = cmd.Flags().GetString("dynamodb-table-name")
 	static_host.Main(cfg)
 }
 
