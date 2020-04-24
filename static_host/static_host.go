@@ -51,7 +51,7 @@ func (s *server) hostToDeploymentId(ctx context.Context, host, suffix string) (*
 			trimmed := strings.TrimSuffix(host, ".sites."+suffix)
 			return &trimmed, nil
 		} else {
-			trimmed := strings.TrimSuffix(host, "."+suffix)
+			trimmed := strings.TrimSuffix(host, ".site."+suffix)
 			site, err := s.dynamoDBSvc.GetItemWithContext(ctx, &dynamodb.GetItemInput{
 				Key: map[string]*dynamodb.AttributeValue{
 					"PartitionKey": {
