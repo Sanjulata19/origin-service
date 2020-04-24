@@ -50,7 +50,7 @@ func (s *server) hostToDeploymentId(ctx context.Context, host, suffix string) (*
 		if strings.HasSuffix(host, ".sites."+suffix) {
 			trimmed := strings.TrimSuffix(host, ".sites."+suffix)
 			return &trimmed, nil
-		} else {
+		} else if strings.HasSuffix(host, ".site."+suffix) {
 			trimmed := strings.TrimSuffix(host, ".site."+suffix)
 			site, err := s.dynamoDBSvc.GetItemWithContext(ctx, &dynamodb.GetItemInput{
 				Key: map[string]*dynamodb.AttributeValue{
@@ -74,15 +74,15 @@ func (s *server) hostToDeploymentId(ctx context.Context, host, suffix string) (*
 				return nil, errNoSuchSuffix
 			}
 		}
-	} else {
-		return nil, errNoSuchSuffix
 	}
+	return nil, errNoSuchSuffix
 }
 
 func (s *server) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	var err error
 	deploymentId, err := s.hostToDeploymentId(r.Context(), r.Host, s.config.HostSuffix)
 	if err != nil {
+		s.logger.Error("Host mapping error", zap.String("error", err.Error()))
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusBadGateway)
 		// FIXME: write error response object and headers
