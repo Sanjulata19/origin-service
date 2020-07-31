@@ -1,4 +1,4 @@
-package static_host
+package service
 
 import (
 	"bufio"
@@ -12,7 +12,7 @@ import (
 
 type responseRouter struct {
 	deploymentId string
-	config       *siteConfig
+	config       *appConfig
 	server       *server
 	rw           http.ResponseWriter
 	r            *http.Request

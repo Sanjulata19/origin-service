@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/nullserve/static-host/config"
-	"github.com/nullserve/static-host/static_host"
+	"github.com/nullserve/origin-service/config"
+	"github.com/nullserve/origin-service/service"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"strings"
@@ -57,18 +57,18 @@ func init() {
 }
 
 func initConfig() {
-	viper.SetEnvPrefix("static_host")
+	viper.SetEnvPrefix("service")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
 }
 
 func root(cmd *cobra.Command, _ []string) {
-	cfg := &config.StaticHost{}
+	cfg := &config.OriginService{}
 	cfg.HostSuffix, _ = cmd.Flags().GetString("domain-suffix")
 	cfg.S3Source.BucketId, _ = cmd.Flags().GetString("s3-bucket")
 	cfg.S3Source.SiteFolderPrefix, _ = cmd.Flags().GetString("s3-prefix-folder")
 	cfg.DynamoDBTableName, _ = cmd.Flags().GetString("dynamodb-table-name")
-	static_host.Main(cfg)
+	service.Main(cfg)
 }
 
 func Execute() error {

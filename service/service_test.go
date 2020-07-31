@@ -1,7 +1,9 @@
-package static_host
+package service
 
 import (
+	"context"
 	"github.com/franela/goblin"
+	"github.com/nullserve/origin-service/config"
 	. "github.com/onsi/gomega"
 	"testing"
 )
@@ -16,23 +18,33 @@ func Test_hostToDeploymentId(t *testing.T) {
 		g.It("should extract the prefix successfully", func() {
 			// Given
 			suffix := "example.com"
-			host := "1234.example.com"
+			host := "1234.sites.example.com"
+			mServer := server{
+				config: &config.OriginService{
+					HostSuffix: suffix,
+				},
+			}
 
 			// When
-			result, err := hostToDeploymentId(host, suffix)
+			result, err := mServer.hostToDeploymentId(context.Background(), host, suffix)
 
 			// Then
-			Expect(*result).Should(Equal("1234"))
 			Expect(err).Should(BeNil())
+			Expect(*result).Should(Equal("1234"))
 		})
 
 		g.It("should error if the suffix doesn't exist", func() {
 			// Given
 			suffix := "example.com"
-			host := "1234.duh.com"
+			host := "1234.sites.duh.com"
+			mServer := server{
+				config: &config.OriginService{
+					HostSuffix: suffix,
+				},
+			}
 
 			// When
-			result, err := hostToDeploymentId(host, suffix)
+			result, err := mServer.hostToDeploymentId(context.Background(), host, suffix)
 
 			// Then
 			Expect(result).Should(BeNil())

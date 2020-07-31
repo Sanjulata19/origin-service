@@ -1,6 +1,6 @@
 package config
 
-type StaticHost struct {
+type OriginService struct {
 	S3Source          S3Source
 	HostSuffix        string
 	DynamoDBTableName string

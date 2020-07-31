@@ -1,4 +1,4 @@
-package static_host
+package service
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/nullserve/static-host/config"
+	"github.com/nullserve/origin-service/config"
 	"go.uber.org/zap"
 	"log"
 	"net/http"
@@ -28,7 +28,7 @@ type dynamoDBService interface {
 }
 
 type server struct {
-	config      *config.StaticHost
+	config      *config.OriginService
 	s3svc       s3Service
 	dynamoDBSvc dynamoDBService
 	logger      *zap.Logger
@@ -107,7 +107,7 @@ func (s *server) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (s *server) getDeploymentConfig(context context.Context, deploymentId string) (*siteConfig, error) {
+func (s *server) getDeploymentConfig(context context.Context, deploymentId string) (*appConfig, error) {
 	var err error
 	s3Req := &s3.GetObjectInput{
 		Bucket: &s.config.S3Source.BucketId,
@@ -115,7 +115,7 @@ func (s *server) getDeploymentConfig(context context.Context, deploymentId strin
 	}
 	s3Res, err := s.s3svc.GetObjectWithContext(context, s3Req)
 	// Default config
-	cfg := siteConfig{Routes: []route{{UseFilesystem: aws.Bool(true)}}}
+	cfg := appConfig{Routes: []route{{UseFilesystem: aws.Bool(true)}}}
 	if err != nil {
 		if aErr, ok := err.(awserr.Error); ok && aErr.Code() != s3.ErrCodeNoSuchKey {
 			s.logger.Error("s3 service error",
@@ -133,7 +133,7 @@ func (s *server) getDeploymentConfig(context context.Context, deploymentId strin
 	return &cfg, nil
 }
 
-func Main(cfg *config.StaticHost) {
+func Main(cfg *config.OriginService) {
 	logger := zap.NewExample()
 	logger.Info("starting Server")
 	var err error

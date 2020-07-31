@@ -1,5 +1,5 @@
-# Static Host
+# NullServe Origin Service
 
-This is a web server that routes and hosts static content based on host name.
-Hostname dictates which application is being requested, allowing Static Host to locate application resources.
-Once the resources are found, the application may control its own routing scheme and instruct static host on how to respond.
+This is an HTTP web server and dynamic proxy which routes content based on host name to the correct serverless backend.
+For Origin Service, hostname dictates which application an end user is requesting, allowing the NullServe Origin Service to locate application resources, including static content proxied APIs and serverless APIs.
+The deployed application controls its own routing scheme and instructs how the Origin Service should respond.

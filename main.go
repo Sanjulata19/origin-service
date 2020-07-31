@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/nullserve/static-host/cmd"
+	"github.com/nullserve/origin-service/cmd"
 	"log"
 )
 

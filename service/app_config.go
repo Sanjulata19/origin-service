@@ -1,4 +1,4 @@
-package static_host
+package service
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"regexp"
 )
 
-type siteConfig struct {
+type appConfig struct {
 	Manifest map[string]bool `json:"manifest"`
 	Routes   []route         `json:"rules"`
 }
@@ -36,7 +36,7 @@ var (
 	errNoMatchedRoute = errors.New("no route matched the path requested")
 )
 
-func (c *siteConfig) matchRoute(path string) (*action, error) {
+func (c *appConfig) matchRoute(path string) (*action, error) {
 	for _, route := range c.Routes {
 		log.Printf("route: %#v", route)
 		if route.UseFilesystem != nil && *route.UseFilesystem {
@@ -72,7 +72,7 @@ func (c *siteConfig) matchRoute(path string) (*action, error) {
 	return nil, errNoMatchedRoute
 }
 
-func (c *siteConfig) validate() bool {
+func (c *appConfig) validate() bool {
 	if c.Routes != nil {
 		isValid := true
 		for _, route := range c.Routes {
@@ -86,8 +86,8 @@ func (c *siteConfig) validate() bool {
 	return true
 }
 
-func (c *siteConfig) MarshalJSON() ([]byte, error) {
-	type alias siteConfig
+func (c *appConfig) MarshalJSON() ([]byte, error) {
+	type alias appConfig
 	manifestList := make([]string, 0)
 	for manifestItem := range c.Manifest {
 		manifestList = append(manifestList, manifestItem)
@@ -112,8 +112,8 @@ func (r *route) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (c *siteConfig) UnmarshalJSON(data []byte) error {
-	type alias siteConfig
+func (c *appConfig) UnmarshalJSON(data []byte) error {
+	type alias appConfig
 	aux := struct {
 		Manifest []string          `json:"manifest"`
 		Routes   []json.RawMessage `json:"routes"`

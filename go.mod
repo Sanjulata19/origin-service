@@ -1,4 +1,4 @@
-module github.com/nullserve/static-host
+module github.com/nullserve/origin-service
 
 go 1.13
 

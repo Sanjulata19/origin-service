@@ -1,4 +1,4 @@
-package static_host
+package service
 
 import (
 	"github.com/franela/goblin"
