@@ -10,7 +10,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Login to ECR
       id: ecr
-      uses: elgohr/ecr-login-action@051c1631071f5c9617a343d86e1e3c7827df1898
+      uses: elgohr/ecr-login-action@29e986ace129aa42c924e104613d6dcf90a3fbfe
       with:
         access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
         secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
