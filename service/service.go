@@ -12,10 +12,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/nullserve/origin-service/config"
 	"go.uber.org/zap"
-	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"path"
 	"strings"
+	"time"
 )
 
 type s3Service interface {
@@ -134,12 +136,19 @@ func (s *server) getDeploymentConfig(context context.Context, deploymentId strin
 }
 
 func Main(cfg *config.OriginService) {
-	logger := zap.NewExample()
-	logger.Info("starting Server")
 	var err error
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	logger := zap.NewExample()
+	logger.Info("starting server...")
+
 	sess := session.Must(session.NewSession(&aws.Config{Region: aws.String("us-east-1")}))
 	dynamoDBSvc := dynamodb.New(sess)
 	s3svc := s3.New(sess)
+
 	srv := http.Server{
 		Addr: ":80",
 		Handler: &server{
@@ -149,21 +158,51 @@ func Main(cfg *config.OriginService) {
 			config:      cfg,
 		},
 	}
+
 	cSrv := http.Server{
 		Addr:    ":8080",
 		Handler: &controlServer{},
 	}
+
+	go func() {
+		sigInt := <-sig
+		logger.Info(sigInt.String() + "received")
+		cancel()
+	}()
+
 	go func() {
 		err = srv.ListenAndServe()
 
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal(err.Error())
 		}
 	}()
 
-	err = cSrv.ListenAndServe()
+	go func() {
+		err = cSrv.ListenAndServe()
 
-	if err != nil {
-		log.Fatal(err)
+		if err != nil {
+			logger.Fatal(err.Error())
+		}
+	}()
+
+	logger.Info("server started")
+
+	<- ctx.Done()
+
+	logger.Info("server stopping...")
+
+	// FIXME: make timeout configurable
+	ctxShutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err = srv.Shutdown(ctxShutdown); err != nil {
+		logger.Fatal("server shutdown failed:" + err.Error())
 	}
+
+	if err = cSrv.Shutdown(ctxShutdown); err != nil {
+		logger.Fatal("command server shutdown failed:" + err.Error())
+	}
+
+	logger.Info("server stopped")
 }
