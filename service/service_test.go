@@ -22,6 +22,8 @@ func Test_hostToDeploymentId(t *testing.T) {
 			mServer := server{
 				config: &config.OriginService{
 					HostSuffix: suffix,
+					AppPrefix: "site",
+					RefPrefix: "sites",
 				},
 			}
 
@@ -40,6 +42,8 @@ func Test_hostToDeploymentId(t *testing.T) {
 			mServer := server{
 				config: &config.OriginService{
 					HostSuffix: suffix,
+					AppPrefix: "site",
+					RefPrefix: "sites",
 				},
 			}
 

@@ -47,11 +47,11 @@ func (cs *controlServer) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 
 func (s *server) hostToDeploymentId(ctx context.Context, host, suffix string) (*string, error) {
 	if strings.HasSuffix(host, "."+suffix) {
-		if strings.HasSuffix(host, ".sites."+suffix) {
-			trimmed := strings.TrimSuffix(host, ".sites."+suffix)
+		if strings.HasSuffix(host, strings.Join([]string{"", s.config.RefPrefix, suffix}, ".")) {
+			trimmed := strings.TrimSuffix(host, strings.Join([]string{"", s.config.RefPrefix, suffix}, "."))
 			return &trimmed, nil
-		} else if strings.HasSuffix(host, ".site."+suffix) {
-			trimmed := strings.TrimSuffix(host, ".site."+suffix)
+		} else if strings.HasSuffix(host, strings.Join([]string{"", s.config.AppPrefix, suffix}, ".")) {
+			trimmed := strings.TrimSuffix(host, strings.Join([]string{"", s.config.AppPrefix, suffix}, "."))
 			site, err := s.dynamoDBSvc.GetItemWithContext(ctx, &dynamodb.GetItemInput{
 				Key: map[string]*dynamodb.AttributeValue{
 					"PartitionKey": {
