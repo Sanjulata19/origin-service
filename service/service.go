@@ -166,7 +166,7 @@ func Main(cfg *config.OriginService) {
 
 	go func() {
 		sigInt := <-sig
-		logger.Info(sigInt.String() + "received")
+		logger.Info(sigInt.String() + " signal received")
 		cancel()
 	}()
 
